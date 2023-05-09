@@ -6,12 +6,12 @@ mod window;
 
 fn main() {
     let window = Window::new();
-    let mut graphics_context = GraphicsContext::new(&window);
+    let mut context = GraphicsContext::new(&window);
 
     window.run(move |event| match event {
-        WindowEvents::Resize { width, height } => graphics_context.resize(width, height),
+        WindowEvents::Resize { width, height } => context.resize(width, height),
         WindowEvents::Draw => {
-            graphics_context.render().expect("Error while rendering");
+            context.render().expect("Error while rendering");
         }
     });
 }
