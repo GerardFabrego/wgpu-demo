@@ -1,5 +1,7 @@
+use wgpu::util::DeviceExt;
 use crate::graphics_context::GraphicsContext;
 use crate::render_pass::RenderPass;
+use crate::vertex::Vertex;
 use crate::window::{Window, WindowEvents};
 
 mod graphics_context;
@@ -12,7 +14,22 @@ fn main() {
     let mut context = GraphicsContext::new(&window);
     let pass = RenderPass::new(&context.device, &context.config);
 
+    const VERTICES: &[Vertex] = &[
+        Vertex { position: [0.0, 0.5, 0.0], color: [1.0, 0.0, 0.0] },
+        Vertex { position: [-0.5, -0.5, 0.0], color: [0.0, 1.0, 0.0] },
+        Vertex { position: [0.5, -0.5, 0.0], color: [0.0, 0.0, 1.0] },
+    ];
+
+    let vertex_buffer = context.device.create_buffer_init(
+        &wgpu::util::BufferInitDescriptor {
+            label: Some("Vertex Buffer"),
+            contents: bytemuck::cast_slice(VERTICES),
+            usage: wgpu::BufferUsages::VERTEX,
+        }
+    );
+
     window.run(move |event| match event {
+
         WindowEvents::Resize { width, height } => context.resize(width, height),
         WindowEvents::Draw => {
             let output = context.surface.get_current_texture().unwrap();
@@ -46,7 +63,8 @@ fn main() {
                 });
 
                 render_pass.set_pipeline(&pass.render_pipeline);
-                render_pass.draw(0..3, 0..1);
+                render_pass.set_vertex_buffer(0, vertex_buffer.slice(..));
+                render_pass.draw(0..VERTICES.len() as u32, 0..1);
             }
 
             // submit will accept anything that implements IntoIter
