@@ -6,7 +6,7 @@ mod window;
 
 fn main() {
     let window = Window::new();
-    let graphics_context = GraphicsContext::new(&window);
+    let mut graphics_context = GraphicsContext::new(&window);
 
     window.run(move |event| match event {
         WindowEvents::Resize { width, height } => graphics_context.resize(width, height),

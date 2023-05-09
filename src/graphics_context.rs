@@ -1,11 +1,11 @@
 use crate::window::Window;
 
 pub struct GraphicsContext {
-    pub surface: wgpu::Surface,
-    pub device: wgpu::Device,
+    surface: wgpu::Surface,
+    device: wgpu::Device,
     adapter: wgpu::Adapter,
-    pub queue: wgpu::Queue,
-    pub config: wgpu::SurfaceConfiguration,
+    queue: wgpu::Queue,
+    config: wgpu::SurfaceConfiguration,
 }
 
 impl GraphicsContext {
@@ -64,26 +64,13 @@ impl GraphicsContext {
         }
     }
 
-    pub fn resize(&self, width: u32, height: u32) {
-        let surface_caps = self.surface.get_capabilities(&self.adapter);
-        let surface_format = surface_caps
-            .formats
-            .iter()
-            .copied()
-            .find(|f| f.is_srgb())
-            .unwrap_or(surface_caps.formats[0]);
+    pub fn resize(&mut self, width: u32, height: u32) {
+        self.config.height = height;
+        self.config.width = width;
 
         self.surface.configure(
             &self.device,
-            &wgpu::SurfaceConfiguration {
-                usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
-                format: surface_format,
-                width,
-                height,
-                present_mode: wgpu::PresentMode::Fifo,
-                alpha_mode: Default::default(),
-                view_formats: vec![],
-            },
+            &self.config,
         );
     }
 

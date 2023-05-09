@@ -24,7 +24,7 @@ impl Window {
         Self { event_loop, window }
     }
 
-    pub fn run(self, callback: impl 'static + Fn(WindowEvents)) {
+    pub fn run(self, mut callback: impl 'static + FnMut(WindowEvents)) {
         self.event_loop.run(move |event, _, control_flow| {
             control_flow.set_poll();
 
