@@ -10,6 +10,8 @@ fn main() {
 
     window.run(move |event| match event {
         WindowEvents::Resize { width, height } => graphics_context.resize(width, height),
-        WindowEvents::Draw => graphics_context.render(),
+        WindowEvents::Draw => {
+            graphics_context.render().expect("Error while rendering");
+        }
     });
 }

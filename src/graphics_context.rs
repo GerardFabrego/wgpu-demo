@@ -66,13 +66,10 @@ impl GraphicsContext {
         self.config.height = height;
         self.config.width = width;
 
-        self.surface.configure(
-            &self.device,
-            &self.config,
-        );
+        self.surface.configure(&self.device, &self.config);
     }
 
-    pub fn render(&self) {
+    pub fn render(&self) -> Result<(), wgpu::SurfaceError> {
         let output = self.surface.get_current_texture().unwrap();
         let view = output
             .texture
@@ -106,5 +103,7 @@ impl GraphicsContext {
         // submit will accept anything that implements IntoIter
         self.queue.submit(std::iter::once(encoder.finish()));
         output.present();
+
+        Ok(())
     }
 }
