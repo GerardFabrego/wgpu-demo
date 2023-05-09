@@ -1,4 +1,3 @@
-use std::future::poll_fn;
 use winit::event::{Event, WindowEvent};
 use winit::event_loop::EventLoop;
 use winit::window::WindowBuilder;
