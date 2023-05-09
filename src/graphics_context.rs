@@ -3,7 +3,6 @@ use crate::window::Window;
 pub struct GraphicsContext {
     surface: wgpu::Surface,
     device: wgpu::Device,
-    adapter: wgpu::Adapter,
     queue: wgpu::Queue,
     config: wgpu::SurfaceConfiguration,
 }
@@ -58,7 +57,6 @@ impl GraphicsContext {
         GraphicsContext {
             surface,
             device,
-            adapter,
             queue,
             config,
         }
