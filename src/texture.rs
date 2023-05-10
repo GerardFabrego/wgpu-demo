@@ -1,4 +1,4 @@
-use image::{GenericImageView, RgbaImage};
+use image::{DynamicImage, GenericImageView, RgbaImage};
 use wgpu::{Device, Extent3d, Queue, Sampler, TextureView};
 
 pub struct Texture {
@@ -7,14 +7,27 @@ pub struct Texture {
 }
 
 impl Texture {
-    pub fn from_bytes(device: &Device, queue: &Queue, bytes: &[u8]) -> Texture {
-        let diffuse_image = image::load_from_memory(bytes).unwrap();
+    pub fn from_bytes(
+        device: &Device,
+        queue: &Queue,
+        bytes: &[u8],
+        label: Option<&str>,
+    ) -> Texture {
+        let img = image::load_from_memory(bytes).unwrap();
+        Self::from_image(device, queue, &img, label)
+    }
 
-        let diffuse_rgba = diffuse_image.to_rgba8();
-        let dimensions = diffuse_image.dimensions();
+    pub fn from_image(
+        device: &Device,
+        queue: &Queue,
+        img: &DynamicImage,
+        label: Option<&str>,
+    ) -> Texture {
+        let diffuse_rgba = img.to_rgba8();
+        let dimensions = img.dimensions();
 
         let size = get_texture_size(dimensions);
-        let diffuse_texture = create_texture(size, &device);
+        let diffuse_texture = create_texture(size, device, label);
 
         queue.write_texture(
             wgpu::ImageCopyTexture {
@@ -55,7 +68,7 @@ fn get_texture_size(dimensions: (u32, u32)) -> Extent3d {
     }
 }
 
-fn create_texture(texture_size: Extent3d, device: &Device) -> wgpu::Texture {
+fn create_texture(texture_size: Extent3d, device: &Device, label: Option<&str>) -> wgpu::Texture {
     device.create_texture(&wgpu::TextureDescriptor {
         size: texture_size,
         mip_level_count: 1,
@@ -63,7 +76,7 @@ fn create_texture(texture_size: Extent3d, device: &Device) -> wgpu::Texture {
         dimension: wgpu::TextureDimension::D2,
         format: wgpu::TextureFormat::Rgba8UnormSrgb,
         usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
-        label: Some("diffuse_texture"),
+        label,
         view_formats: &[],
     })
 }
