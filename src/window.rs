@@ -1,11 +1,12 @@
 use winit::dpi::PhysicalSize;
-use winit::event::{Event, WindowEvent};
+use winit::event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent};
 use winit::event_loop::EventLoop;
 use winit::window;
 
 pub enum WindowEvents {
     Resize { width: u32, height: u32 },
     Draw,
+    Keyboard(VirtualKeyCode),
 }
 
 pub struct Window {
@@ -30,11 +31,29 @@ impl Window {
 
             match event {
                 Event::WindowEvent { ref event, .. } => match event {
-                    WindowEvent::CloseRequested => control_flow.set_exit(),
+                    WindowEvent::CloseRequested
+                    | WindowEvent::KeyboardInput {
+                        input:
+                            KeyboardInput {
+                                state: ElementState::Pressed,
+                                virtual_keycode: Some(VirtualKeyCode::Escape),
+                                ..
+                            },
+                        ..
+                    } => control_flow.set_exit(),
                     WindowEvent::Resized(physical_size) => callback(WindowEvents::Resize {
                         width: physical_size.width,
                         height: physical_size.height,
                     }),
+                    WindowEvent::KeyboardInput {
+                        input:
+                            KeyboardInput {
+                                state: ElementState::Pressed,
+                                virtual_keycode: Some(keycode),
+                                ..
+                            },
+                        ..
+                    } => callback(WindowEvents::Keyboard(*keycode)),
                     _ => {}
                 },
                 Event::MainEventsCleared => self.window.request_redraw(),

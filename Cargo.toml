@@ -11,4 +11,5 @@ pollster = "0.3.0"
 wgpu = "0.16.0"
 winit = "0.28.5"
 image = {version="0.24", default-features=false, features=["png", "jpeg"]}
+cgmath = "0.18.0"
 

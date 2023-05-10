@@ -1,5 +1,8 @@
-use crate::bind_groups::{create_bind_group, create_bind_group_layout};
+use crate::bind_groups::{create_camera_bind_group, create_camera_bind_group_layout};
+use crate::camera::{Camera, CameraEvent, CameraUniform};
+use bind_groups::{create_bind_group, create_bind_group_layout};
 use wgpu::util::DeviceExt;
+use winit::event::VirtualKeyCode;
 
 use crate::graphics_context::GraphicsContext;
 use crate::render_pass::RenderPass;
@@ -8,6 +11,7 @@ use crate::vertex::Vertex;
 use crate::window::{Window, WindowEvents};
 
 mod bind_groups;
+mod camera;
 mod graphics_context;
 mod render_pass;
 mod texture;
@@ -18,6 +22,31 @@ fn main() {
     let window = Window::new();
     let mut context = GraphicsContext::new(&window);
 
+    let mut camera = Camera::new(
+        (0.0, 1.0, 2.0).into(),
+        (0.0, 0.0, 0.0).into(),
+        cgmath::Vector3::unit_y(),
+        context.config.width as f32 / context.config.height as f32,
+        45.0,
+        0.1,
+        100.0,
+    );
+
+    let mut camera_uniform = CameraUniform::new();
+    camera_uniform.update_view_proj(&camera);
+
+    let camera_buffer = context
+        .device
+        .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Camera Buffer"),
+            contents: bytemuck::cast_slice(&[camera_uniform]),
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        });
+
+    let camera_bind_group_layout = create_camera_bind_group_layout(&context.device);
+    let camera_bind_group =
+        create_camera_bind_group(&context.device, &camera_buffer, &camera_bind_group_layout);
+
     let diffuse_bytes = include_bytes!("happy-tree.png");
     let texture = Texture::from_bytes(
         &context.device,
@@ -26,10 +55,14 @@ fn main() {
         Some("happy-tree.png"),
     );
 
-    let bind_group_layout = create_bind_group_layout(&context.device);
-    let bind_group = create_bind_group(&context.device, &bind_group_layout, &texture);
+    let texture_group_layout = create_bind_group_layout(&context.device);
+    let texture_bind_group = create_bind_group(&context.device, &texture_group_layout, &texture);
 
-    let pass = RenderPass::new(&context.device, &context.config, &[&bind_group_layout]);
+    let pass = RenderPass::new(
+        &context.device,
+        &context.config,
+        &[&texture_group_layout, &camera_bind_group_layout],
+    );
 
     const VERTICES: &[Vertex] = &[
         Vertex {
@@ -75,6 +108,10 @@ fn main() {
     window.run(move |event| match event {
         WindowEvents::Resize { width, height } => context.resize(width, height),
         WindowEvents::Draw => {
+            camera_uniform.update_view_proj(&camera);
+            context
+                .queue
+                .write_buffer(&camera_buffer, 0, bytemuck::cast_slice(&[camera_uniform]));
             let output = context.surface.get_current_texture().unwrap();
             let view = output
                 .texture
@@ -106,7 +143,8 @@ fn main() {
                 });
 
                 render_pass.set_pipeline(&pass.render_pipeline);
-                render_pass.set_bind_group(0, &bind_group, &[]); // NEW!
+                render_pass.set_bind_group(0, &texture_bind_group, &[]);
+                render_pass.set_bind_group(1, &camera_bind_group, &[]);
                 render_pass.set_vertex_buffer(0, vertex_buffer.slice(..));
                 render_pass.set_index_buffer(index_buffer.slice(..), wgpu::IndexFormat::Uint16);
                 render_pass.draw_indexed(0..INDICES.len() as u32, 0, 0..1);
@@ -116,5 +154,12 @@ fn main() {
             context.queue.submit(std::iter::once(encoder.finish()));
             output.present();
         }
+        WindowEvents::Keyboard(keycode) => match keycode {
+            VirtualKeyCode::W | VirtualKeyCode::Up => camera.update(CameraEvent::Up),
+            VirtualKeyCode::A | VirtualKeyCode::Left => camera.update(CameraEvent::Left),
+            VirtualKeyCode::S | VirtualKeyCode::Down => camera.update(CameraEvent::Down),
+            VirtualKeyCode::D | VirtualKeyCode::Right => camera.update(CameraEvent::Right),
+            _ => {}
+        },
     });
 }
