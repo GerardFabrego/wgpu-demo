@@ -1,3 +1,4 @@
+use crate::instance::InstanceRaw;
 use crate::vertex::Vertex;
 use crate::window::Window;
 
@@ -86,13 +87,13 @@ pub fn create_render_pipeline(
         vertex: wgpu::VertexState {
             module: &shader,
             entry_point: "vs_main",
-            buffers: &[Vertex::desc()],
+            buffers: &[Vertex::desc(), InstanceRaw::desc()],
         },
         fragment: Some(wgpu::FragmentState {
             module: &shader,
             entry_point: "fs_main",
             targets: &[Some(wgpu::ColorTargetState {
-                format: format,
+                format,
                 blend: Some(wgpu::BlendState::REPLACE),
                 write_mask: wgpu::ColorWrites::ALL,
             })],

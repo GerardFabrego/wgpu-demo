@@ -1,15 +1,13 @@
-use cgmath::InnerSpace;
 use crate::camera::{Camera, CameraEvent};
+use cgmath::InnerSpace;
 
 pub struct CameraController {
-    speed: f32
+    speed: f32,
 }
 
 impl CameraController {
     pub fn new(speed: f32) -> CameraController {
-        CameraController {
-            speed
-        }
+        CameraController { speed }
     }
 
     pub fn update(&self, camera: &mut Camera, event: CameraEvent) {
@@ -25,13 +23,15 @@ impl CameraController {
                 let forward = camera.target - camera.eye;
                 let forward_mag = forward.magnitude();
 
-                camera.eye = camera.target - (forward - right * self.speed).normalize() * forward_mag;
+                camera.eye =
+                    camera.target - (forward - right * self.speed).normalize() * forward_mag;
             }
             CameraEvent::Right => {
                 let forward = camera.target - camera.eye;
                 let forward_mag = forward.magnitude();
 
-                camera.eye = camera.target - (forward + right * self.speed).normalize() * forward_mag;
+                camera.eye =
+                    camera.target - (forward + right * self.speed).normalize() * forward_mag;
             }
         };
     }

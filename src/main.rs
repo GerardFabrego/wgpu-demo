@@ -1,22 +1,24 @@
-use crate::bind_groups::{create_camera_bind_group, create_camera_bind_group_layout};
-use bind_groups::{create_bind_group, create_bind_group_layout};
+use camera::{Camera, CameraController, CameraEvent, CameraUniform};
+use bind_groups::{create_bind_group, create_bind_group_layout, create_camera_bind_group, create_camera_bind_group_layout};
+use cgmath::{InnerSpace, Rotation3, Zero};
 use wgpu::util::DeviceExt;
 use winit::event::VirtualKeyCode;
-use crate::camera::{Camera, CameraController, CameraEvent, CameraUniform};
 
 use crate::graphics_context::GraphicsContext;
+use crate::instance::Instance;
 use crate::render_pass::RenderPass;
 use crate::texture::Texture;
 use crate::vertex::Vertex;
 use crate::window::{Window, WindowEvents};
 
 mod bind_groups;
+mod camera;
 mod graphics_context;
+mod instance;
 mod render_pass;
 mod texture;
 mod vertex;
 mod window;
-mod camera;
 
 fn main() {
     let window = Window::new();
@@ -106,6 +108,42 @@ fn main() {
             usage: wgpu::BufferUsages::INDEX,
         });
 
+    const NUM_INSTANCES_PER_ROW: u32 = 10;
+    const INSTANCE_DISPLACEMENT: cgmath::Vector3<f32> = cgmath::Vector3::new(
+        NUM_INSTANCES_PER_ROW as f32 * 0.5,
+        0.0,
+        NUM_INSTANCES_PER_ROW as f32 * 0.5,
+    );
+
+    let instances = (0..NUM_INSTANCES_PER_ROW)
+        .flat_map(|z| {
+            (0..NUM_INSTANCES_PER_ROW).map(move |x| {
+                let position = cgmath::Vector3 {
+                    x: x as f32,
+                    y: 0.0,
+                    z: z as f32,
+                } - INSTANCE_DISPLACEMENT;
+
+                let rotation = if position.is_zero() {
+                    cgmath::Quaternion::from_axis_angle(cgmath::Vector3::unit_z(), cgmath::Deg(0.0))
+                } else {
+                    cgmath::Quaternion::from_axis_angle(position.normalize(), cgmath::Deg(45.0))
+                };
+
+                Instance::new(position, rotation)
+            })
+        })
+        .collect::<Vec<_>>();
+
+    let instance_data = instances.iter().map(Instance::to_raw).collect::<Vec<_>>();
+    let instance_buffer = context.device.create_buffer_init(
+        &wgpu::util::BufferInitDescriptor {
+            label: Some("Instance Buffer"),
+            contents: bytemuck::cast_slice(&instance_data),
+            usage: wgpu::BufferUsages::VERTEX,
+        }
+    );
+
     window.run(move |event| match event {
         WindowEvents::Resize { width, height } => context.resize(width, height),
         WindowEvents::Draw => {
@@ -147,20 +185,29 @@ fn main() {
                 render_pass.set_bind_group(0, &texture_bind_group, &[]);
                 render_pass.set_bind_group(1, &camera_bind_group, &[]);
                 render_pass.set_vertex_buffer(0, vertex_buffer.slice(..));
+
+                render_pass.set_vertex_buffer(1, instance_buffer.slice(..));
                 render_pass.set_index_buffer(index_buffer.slice(..), wgpu::IndexFormat::Uint16);
-                render_pass.draw_indexed(0..INDICES.len() as u32, 0, 0..1);
+
+                render_pass.draw_indexed(0..INDICES.len() as u32, 0, 0..instances.len() as _);
             }
 
-            // submit will accept anything that implements IntoIter
             context.queue.submit(std::iter::once(encoder.finish()));
             output.present();
         }
         WindowEvents::Keyboard(keycode) => match keycode {
-
-            VirtualKeyCode::W | VirtualKeyCode::Up => camera_controller.update(&mut camera, CameraEvent::Up),
-            VirtualKeyCode::A | VirtualKeyCode::Left => camera_controller.update(&mut camera, CameraEvent::Left),
-            VirtualKeyCode::S | VirtualKeyCode::Down => camera_controller.update(&mut camera, CameraEvent::Down),
-            VirtualKeyCode::D | VirtualKeyCode::Right => camera_controller.update(&mut camera, CameraEvent::Right),
+            VirtualKeyCode::W | VirtualKeyCode::Up => {
+                camera_controller.update(&mut camera, CameraEvent::Up)
+            }
+            VirtualKeyCode::A | VirtualKeyCode::Left => {
+                camera_controller.update(&mut camera, CameraEvent::Left)
+            }
+            VirtualKeyCode::S | VirtualKeyCode::Down => {
+                camera_controller.update(&mut camera, CameraEvent::Down)
+            }
+            VirtualKeyCode::D | VirtualKeyCode::Right => {
+                camera_controller.update(&mut camera, CameraEvent::Right)
+            }
             _ => {}
         },
     });
