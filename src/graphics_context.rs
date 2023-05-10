@@ -1,4 +1,5 @@
 use crate::instance::InstanceRaw;
+use crate::texture::Texture;
 use crate::vertex::Vertex;
 use crate::window::Window;
 
@@ -107,7 +108,13 @@ pub fn create_render_pipeline(
             unclipped_depth: false,
             conservative: false,
         },
-        depth_stencil: None,
+        depth_stencil: Some(wgpu::DepthStencilState {
+            format: Texture::DEPTH_FORMAT,
+            depth_write_enabled: true,
+            depth_compare: wgpu::CompareFunction::Less, // 1.
+            stencil: wgpu::StencilState::default(), // 2.
+            bias: wgpu::DepthBiasState::default(),
+        }),
         multisample: wgpu::MultisampleState {
             count: 1,
             mask: !0,

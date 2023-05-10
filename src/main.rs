@@ -61,6 +61,9 @@ fn main() {
     let texture_group_layout = create_bind_group_layout(&context.device);
     let texture_bind_group = create_bind_group(&context.device, &texture_group_layout, &texture);
 
+    let mut depth_texture = Texture::create_depth_texture(&context.device, &context.config, "depth_texture");
+
+
     let pass = RenderPass::new(
         &context.device,
         &context.config,
@@ -145,7 +148,10 @@ fn main() {
     );
 
     window.run(move |event| match event {
-        WindowEvents::Resize { width, height } => context.resize(width, height),
+        WindowEvents::Resize { width, height } => {
+            depth_texture = Texture::create_depth_texture(&context.device, &context.config, "depth_texture");
+            context.resize(width, height)
+        },
         WindowEvents::Draw => {
             camera_uniform.update_view_proj(&camera);
             context
@@ -178,7 +184,14 @@ fn main() {
                             store: true,
                         },
                     })],
-                    depth_stencil_attachment: None,
+                    depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
+                        view: &depth_texture.view,
+                        depth_ops: Some(wgpu::Operations {
+                            load: wgpu::LoadOp::Clear(1.0),
+                            store: true,
+                        }),
+                        stencil_ops: None,
+                    }),
                 });
 
                 render_pass.set_pipeline(&pass.render_pipeline);
