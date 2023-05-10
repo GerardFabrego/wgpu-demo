@@ -1,3 +1,7 @@
+mod camera_controller;
+
+pub use camera_controller::CameraController;
+
 use cgmath::InnerSpace;
 
 #[derive(Debug)]
@@ -53,30 +57,6 @@ impl Camera {
         let proj = cgmath::perspective(cgmath::Deg(self.fovy), self.aspect, self.znear, self.zfar);
 
         OPENGL_TO_WGPU_MATRIX * proj * view
-    }
-
-    pub fn update(&mut self, event: CameraEvent) {
-        let forward = self.target - self.eye;
-        let forward_norm = forward.normalize();
-
-        let right = forward_norm.cross(self.up);
-
-        match event {
-            CameraEvent::Up => self.eye += forward_norm * self.speed,
-            CameraEvent::Down => self.eye -= forward_norm * self.speed,
-            CameraEvent::Left => {
-                let forward = self.target - self.eye;
-                let forward_mag = forward.magnitude();
-
-                self.eye = self.target - (forward - right * self.speed).normalize() * forward_mag;
-            }
-            CameraEvent::Right => {
-                let forward = self.target - self.eye;
-                let forward_mag = forward.magnitude();
-
-                self.eye = self.target - (forward + right * self.speed).normalize() * forward_mag;
-            }
-        };
     }
 }
 

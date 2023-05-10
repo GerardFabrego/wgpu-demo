@@ -1,8 +1,8 @@
 use crate::bind_groups::{create_camera_bind_group, create_camera_bind_group_layout};
-use crate::camera::{Camera, CameraEvent, CameraUniform};
 use bind_groups::{create_bind_group, create_bind_group_layout};
 use wgpu::util::DeviceExt;
 use winit::event::VirtualKeyCode;
+use crate::camera::{Camera, CameraController, CameraEvent, CameraUniform};
 
 use crate::graphics_context::GraphicsContext;
 use crate::render_pass::RenderPass;
@@ -11,12 +11,12 @@ use crate::vertex::Vertex;
 use crate::window::{Window, WindowEvents};
 
 mod bind_groups;
-mod camera;
 mod graphics_context;
 mod render_pass;
 mod texture;
 mod vertex;
 mod window;
+mod camera;
 
 fn main() {
     let window = Window::new();
@@ -32,6 +32,7 @@ fn main() {
         100.0,
     );
 
+    let camera_controller = CameraController::new(0.2);
     let mut camera_uniform = CameraUniform::new();
     camera_uniform.update_view_proj(&camera);
 
@@ -155,10 +156,11 @@ fn main() {
             output.present();
         }
         WindowEvents::Keyboard(keycode) => match keycode {
-            VirtualKeyCode::W | VirtualKeyCode::Up => camera.update(CameraEvent::Up),
-            VirtualKeyCode::A | VirtualKeyCode::Left => camera.update(CameraEvent::Left),
-            VirtualKeyCode::S | VirtualKeyCode::Down => camera.update(CameraEvent::Down),
-            VirtualKeyCode::D | VirtualKeyCode::Right => camera.update(CameraEvent::Right),
+
+            VirtualKeyCode::W | VirtualKeyCode::Up => camera_controller.update(&mut camera, CameraEvent::Up),
+            VirtualKeyCode::A | VirtualKeyCode::Left => camera_controller.update(&mut camera, CameraEvent::Left),
+            VirtualKeyCode::S | VirtualKeyCode::Down => camera_controller.update(&mut camera, CameraEvent::Down),
+            VirtualKeyCode::D | VirtualKeyCode::Right => camera_controller.update(&mut camera, CameraEvent::Right),
             _ => {}
         },
     });
