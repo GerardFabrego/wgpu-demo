@@ -1,6 +1,6 @@
 use crate::instance::InstanceRaw;
+use crate::object::{ModelVertex, Vertex};
 use crate::texture::Texture;
-use crate::vertex::Vertex;
 use crate::window::Window;
 
 pub struct GraphicsContext {
@@ -88,7 +88,7 @@ pub fn create_render_pipeline(
         vertex: wgpu::VertexState {
             module: &shader,
             entry_point: "vs_main",
-            buffers: &[Vertex::desc(), InstanceRaw::desc()],
+            buffers: &[ModelVertex::desc(), InstanceRaw::desc()],
         },
         fragment: Some(wgpu::FragmentState {
             module: &shader,
@@ -112,7 +112,7 @@ pub fn create_render_pipeline(
             format: Texture::DEPTH_FORMAT,
             depth_write_enabled: true,
             depth_compare: wgpu::CompareFunction::Less, // 1.
-            stencil: wgpu::StencilState::default(), // 2.
+            stencil: wgpu::StencilState::default(),     // 2.
             bias: wgpu::DepthBiasState::default(),
         }),
         multisample: wgpu::MultisampleState {
