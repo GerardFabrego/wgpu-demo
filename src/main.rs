@@ -6,10 +6,12 @@ use camera::{Camera, CameraController, CameraEvent, CameraUniform};
 use cgmath::{InnerSpace, Rotation3, Zero};
 use wgpu::util::DeviceExt;
 use winit::event::VirtualKeyCode;
+use crate::bind_groups::{create_light_bind_group, create_light_bind_group_layout};
 
-use crate::graphics_context::GraphicsContext;
+use crate::graphics_context::{create_render_pipeline, GraphicsContext};
 use crate::instance::Instance;
-use crate::object::DrawModel;
+use crate::light::LightUniform;
+use crate::object::{DrawLight, DrawModel, Vertex};
 use crate::render_pass::RenderPass;
 use crate::texture::Texture;
 use crate::window::{Window, WindowEvents};
@@ -23,6 +25,7 @@ mod render_pass;
 mod resources;
 mod texture;
 mod window;
+mod light;
 
 fn main() {
     let window = Window::new();
@@ -54,6 +57,35 @@ fn main() {
     let camera_bind_group =
         create_camera_bind_group(&context.device, &camera_buffer, &camera_bind_group_layout);
 
+    let mut light_uniform = LightUniform::new([2.0, 2.0, 2.0], [1.0, 1.0, 1.0]);
+    let light_buffer = context
+        .device
+        .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Light Buffer"),
+            contents: bytemuck::cast_slice(&[light_uniform]),
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        });
+    let light_bind_group_layout = create_light_bind_group_layout(&context.device);
+    let light_bind_group = create_light_bind_group(&context.device, &light_buffer, &light_bind_group_layout);
+    let light_render_pipeline = {
+        let layout = &context.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("Light Pipeline Layout"),
+            bind_group_layouts: &[&camera_bind_group_layout, &light_bind_group_layout],
+            push_constant_ranges: &[],
+        });
+        let shader = wgpu::ShaderModuleDescriptor {
+            label: Some("Light Shader"),
+            source: wgpu::ShaderSource::Wgsl(include_str!("light.wgsl").into()),
+        };
+        create_render_pipeline(
+            &context.device,
+            layout,
+            context.config.format,
+            Some(Texture::DEPTH_FORMAT),
+            &[object::ModelVertex::desc()],
+            shader,
+        )
+    };
     let texture_bind_group_layout = create_bind_group_layout(&context.device);
 
     let mut depth_texture =
@@ -62,7 +94,7 @@ fn main() {
     let pass = RenderPass::new(
         &context.device,
         &context.config,
-        &[&texture_bind_group_layout, &camera_bind_group_layout],
+        &[&texture_bind_group_layout, &camera_bind_group_layout, &light_bind_group_layout],
     );
 
     let obj_model = pollster::block_on(resources::load_model(
@@ -115,10 +147,22 @@ fn main() {
             context.resize(width, height)
         }
         WindowEvents::Draw => {
+            //update camera
             camera_uniform.update_view_proj(&camera);
             context
                 .queue
                 .write_buffer(&camera_buffer, 0, bytemuck::cast_slice(&[camera_uniform]));
+
+            //update light
+            let old_position: cgmath::Vector3<_> = light_uniform.position.into();
+            light_uniform.position =
+                (cgmath::Quaternion::from_axis_angle((0.0, 1.0, 0.0).into(), cgmath::Deg(1.0))
+                    * old_position)
+                    .into();
+            context.queue.write_buffer(&light_buffer, 0, bytemuck::cast_slice(&[light_uniform]));
+
+            //render
+
             let output = context.surface.get_current_texture().unwrap();
             let view = output
                 .texture
@@ -155,15 +199,22 @@ fn main() {
                         stencil_ops: None,
                     }),
                 });
-
-                render_pass.set_pipeline(&pass.render_pipeline);
-                render_pass.set_bind_group(1, &camera_bind_group, &[]);
                 render_pass.set_vertex_buffer(1, instance_buffer.slice(..));
 
-                let mesh = &obj_model.meshes[0];
-                let material = &obj_model.materials[0];
+                render_pass.set_pipeline(&light_render_pipeline);
+                render_pass.draw_light_model(
+                    &obj_model,
+                    &camera_bind_group,
+                    &light_bind_group,
+                );
 
-                render_pass.draw_mesh_instanced(mesh, material, 0..instances.len() as u32);
+                render_pass.set_pipeline(&pass.render_pipeline);
+                render_pass.draw_model_instanced(
+                    &obj_model,
+                    0..instances.len() as u32,
+                    &camera_bind_group,
+                    &light_bind_group,
+                );
             }
 
             context.queue.submit(std::iter::once(encoder.finish()));

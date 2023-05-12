@@ -76,3 +76,30 @@ pub fn create_camera_bind_group(
         label: Some("camera_bind_group"),
     })
 }
+
+pub fn create_light_bind_group_layout(device: &Device) -> BindGroupLayout {
+    device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+        entries: &[wgpu::BindGroupLayoutEntry {
+            binding: 0,
+            visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
+            ty: wgpu::BindingType::Buffer {
+                ty: wgpu::BufferBindingType::Uniform,
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        }],
+        label: None,
+    })
+}
+
+pub fn create_light_bind_group(device: &Device, light_buffer: &wgpu::Buffer, light_bind_group_layout: &BindGroupLayout) -> BindGroup{
+    device.create_bind_group(&wgpu::BindGroupDescriptor {
+        layout: light_bind_group_layout,
+        entries: &[wgpu::BindGroupEntry {
+            binding: 0,
+            resource: light_buffer.as_entire_binding(),
+        }],
+        label: None,
+    })
+}

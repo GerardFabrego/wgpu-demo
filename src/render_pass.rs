@@ -1,5 +1,9 @@
 use crate::graphics_context::create_render_pipeline;
 use wgpu::BindGroupLayout;
+use crate::instance::InstanceRaw;
+use crate::object;
+use crate::object::Vertex;
+use crate::texture::Texture;
 
 pub struct RenderPass {
     pub render_pipeline: wgpu::RenderPipeline,
@@ -24,7 +28,14 @@ impl RenderPass {
                 source: wgpu::ShaderSource::Wgsl(include_str!("shader.wgsl").into()),
             };
 
-            create_render_pipeline(device, &render_pipeline_layout, shader, config.format)
+            create_render_pipeline(
+                device,
+                &render_pipeline_layout,
+                config.format,
+                Some(Texture::DEPTH_FORMAT),
+                &[object::ModelVertex::desc(), InstanceRaw::desc()],
+                shader,
+            )
         };
 
         RenderPass { render_pipeline }

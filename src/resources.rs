@@ -1,6 +1,7 @@
 use std::io::{BufReader, Cursor};
 use wgpu::util::DeviceExt;
 use wgpu::{Device, Queue};
+use crate::bind_groups::create_bind_group;
 
 use crate::object;
 use crate::texture::Texture;
@@ -32,20 +33,7 @@ pub async fn load_model(
     let mut materials = Vec::new();
     for m in obj_materials? {
         let diffuse_texture = load_texture(&m.diffuse_texture.unwrap(), device, queue).await;
-        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: wgpu::BindingResource::TextureView(&diffuse_texture.view),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: wgpu::BindingResource::Sampler(&diffuse_texture.sampler),
-                },
-            ],
-            label: None,
-        });
+        let bind_group = create_bind_group(device, layout, &diffuse_texture);
 
         materials.push(object::Material {
             name: m.name,
